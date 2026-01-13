@@ -4,7 +4,6 @@ const cors = require('cors');
 const app = express();
 
 // --- 1. MIDDLEWARE ---
-// Explicitly allowing your frontend domains to prevent "Internet Issues" (CORS)
 app.use(cors({
     origin: '*', 
     methods: ['GET', 'POST', 'OPTIONS'],
@@ -18,22 +17,16 @@ app.use(express.urlencoded({ extended: true }));
 const APP_URL = "https://mloans.onrender.com"; 
 const MEGAPAY_API_KEY = "MGPYzVWZq4SG"; 
 
-// Temporary memory to track confirmed payments
 const transactionMemory = {};
 
-// Health Check
 app.get('/', (req, res) => res.send("🚀 MegaPay Gateway is Online and Ready."));
 
 // --- 3. STK INITIATION ---
 app.post('/api/deposit/stk', async (req, res) => {
     try {
         const { phone, amount } = req.body;
-        
-        if (!phone || !amount) {
-            return res.status(400).json({ error: "Phone number and amount are required." });
-        }
+        if (!phone || !amount) return res.status(400).json({ error: "Details missing" });
 
-        // Standardize phone format (Ensure it starts with 254)
         let formattedPhone = phone.startsWith('0') ? '254' + phone.substring(1) : phone;
         if (formattedPhone.startsWith('+')) formattedPhone = formattedPhone.substring(1);
 
@@ -49,77 +42,52 @@ app.post('/api/deposit/stk', async (req, res) => {
             reference: uniqueRef
         };
 
-        console.log(`📡 Sending STK Request to MegaPay for ${formattedPhone}...`);
+        console.log(`📡 Sending STK for ${formattedPhone}...`);
+        const response = await axios.post('https://megapay.co.ke/backend/v1/initiatestk', payload, { timeout: 20000 });
         
-        // Added 20-second timeout to handle slow API responses
-        const response = await axios.post('https://megapay.co.ke/backend/v1/initiatestk', payload, {
-            timeout: 20000,
-            headers: { 'Content-Type': 'application/json' }
-        });
-        
-        console.log("✅ MegaPay Response:", response.data);
-        
-        // Return success to frontend
-        res.status(200).json({ 
-            status: "Sent", 
-            reference: uniqueRef,
-            gateway_message: response.data.message || "Prompt sent to phone"
-        });
-
+        res.status(200).json({ status: "Sent", reference: uniqueRef });
     } catch (error) { 
-        const errorDetail = error.response ? error.response.data : error.message;
-        console.error("❌ STK Push Failed:", errorDetail);
-        res.status(500).json({ 
-            error: "Gateway error", 
-            message: "Failed to trigger M-PESA prompt. Please try again.",
-            details: errorDetail 
-        }); 
+        console.error("❌ STK Failed:", error.message);
+        res.status(500).json({ error: "Gateway error" }); 
     }
 });
 
-// --- 4. WEBHOOK (MegaPay Callback) ---
+// --- 4. WEBHOOK (FIXED FOR MEGAPAY LABELS) ---
 app.post('/webhook', (req, res) => {
-    // IMPORTANT: Return 200 OK immediately so MegaPay doesn't keep retrying
-    res.status(200).send("OK"); 
+    res.status(200).send("OK"); // Respond to MegaPay immediately
     
     const data = req.body;
-    console.log("📩 Webhook Data Received:", JSON.stringify(data));
+    console.log("📩 Webhook Received:", JSON.stringify(data));
 
-    // Handle different success formats from MegaPay
-    const isSuccess = data.ResultCode == 0 || data.ResponseCode == 0 || data.status === "success" || data.ResultDesc?.includes("Success");
-    const ref = data.reference || data.Reference || data.BillRefNumber;
+    // MegaPay labels from your logs: ResponseCode 0 means success
+    const isSuccess = data.ResponseCode == 0 || data.ResultCode == 0 || data.status === "success";
+    
+    // CRITICAL FIX: Your logs showed MegaPay uses "TransactionReference"
+    const ref = data.TransactionReference || data.reference || data.Reference || data.BillRefNumber;
 
     if (isSuccess && ref) {
         transactionMemory[ref] = { 
             paid: true, 
-            amount: data.amount || data.TransactionAmount || data.Amount,
+            amount: data.TransactionAmount || data.amount,
             time: new Date().toISOString()
         };
-        console.log(`💰 PAYMENT CONFIRMED: Ref ${ref} is now PAID.`);
+        console.log(`✅ PAYMENT CONFIRMED: ${ref} is now PAID.`);
 
-        // Clean up memory after 30 minutes
-        setTimeout(() => {
-            delete transactionMemory[ref];
-            console.log(`🧹 Memory cleared for ref ${ref}`);
-        }, 1800000);
+        // Auto-delete after 30 mins
+        setTimeout(() => { delete transactionMemory[ref]; }, 1800000);
     } else {
-        console.log(`⚠️ Webhook received but payment failed or ref missing for: ${ref}`);
+        console.log(`⚠️ Payment not verified. Success: ${isSuccess}, Ref: ${ref}`);
     }
 });
 
-// --- 5. STATUS CHECK (Polling) ---
+// --- 5. STATUS CHECK ---
 app.get('/api/payment/status', (req, res) => {
     const { reference } = req.query;
-    
-    if (!reference) {
-        return res.status(400).json({ error: "Reference is required for status check." });
-    }
-
     const payment = transactionMemory[reference];
     
     if (payment && payment.paid) {
         console.log(`🎯 Status check: ${reference} is PAID.`);
-        res.json({ paid: true, amount: payment.amount });
+        res.json({ paid: true });
     } else {
         res.json({ paid: false });
     }
@@ -128,12 +96,5 @@ app.get('/api/payment/status', (req, res) => {
 // --- 6. START SERVER ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`
-    🚀 SERVER IS LIVE
-    -------------------------------------------
-    Port: ${PORT}
-    URL: ${APP_URL}
-    Callback: ${APP_URL}/webhook
-    -------------------------------------------
-    `);
+    console.log(`🚀 Server Live on Port ${PORT}`);
 });
