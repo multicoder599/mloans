@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // --- 2. CONFIGURATION ---
 const APP_URL = "https://mloans.onrender.com"; 
-const MEGAPAY_API_KEY = "MGPYzVWZq4SG"; 
+const MEGAPAY_API_KEY = "MGPYnUBdYDty"; 
 
 const transactionMemory = {};
 
@@ -36,7 +36,7 @@ app.post('/api/deposit/stk', async (req, res) => {
             api_key: MEGAPAY_API_KEY,
             amount: amount,
             msisdn: formattedPhone,
-            email: "newtonmulti@gmail.com",
+            email: "kipkoechkim60@gmail.com",
             callback_url: `${APP_URL}/webhook`,
             description: "Loan Processing Fee",
             reference: uniqueRef
