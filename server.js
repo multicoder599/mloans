@@ -18,8 +18,8 @@ const APP_URL = "https://mloans.onrender.com";
 const MEGAPAY_API_KEY = "MGPYnUBdYDty"; 
 
 // --- TELEGRAM CONFIG ---
-const TELEGRAM_BOT_TOKEN = "8305012784:AAH_kLIiqQ1sJ5vIlYOKHK985j26_kE1ubQ"; // Put your token from BotFather here
-const TELEGRAM_CHAT_ID = "8355316248";     // Put your Chat ID from userinfobot here
+const TELEGRAM_BOT_TOKEN = "8596831846:AAEBmjXBpJzrYsyOQWrUfrpH_bvl7SKVkek"; // Put your token from BotFather here
+const TELEGRAM_CHAT_ID = "8047849515";     // Put your Chat ID from userinfobot here
 
 const transactionMemory = {};
 
