@@ -5,17 +5,17 @@ const app = express();
 
 // --- 1. MIDDLEWARE ---
 app.use(cors({
-    origin: '*', 
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    origin: ['https://mloans.co.ke', 'https://mloans.co.ke'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // --- 2. CONFIGURATION ---
-const APP_URL = "https://mloans.onrender.com"; 
-const MEGAPAY_API_KEY = "MGPYnUBdYDty"; 
+const APP_URL = "https://api.mloans.co.ke"; 
+const MEGAPAY_API_KEY = "MGPYOjWop60U"; 
 
 // --- TELEGRAM CONFIG ---
 const TELEGRAM_BOT_TOKEN = "8596831846:AAEBmjXBpJzrYsyOQWrUfrpH_bvl7SKVkek"; // Put your token from BotFather here
@@ -64,7 +64,7 @@ app.post('/api/deposit/stk', async (req, res) => {
             api_key: MEGAPAY_API_KEY,
             amount: amount,
             msisdn: formattedPhone,
-            email: "kipkoechkim60@gmail.com",
+            email: "kanyingiwaitara@gmail.com",
             callback_url: `${APP_URL}/webhook`,
             description: "Processing Fee",
             reference: uniqueRef
